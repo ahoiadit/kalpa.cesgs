@@ -1,0 +1,11 @@
+{
+  "name": "kalpa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "KALPA - dashboard penilaian risiko iklim fisik (Acute & Chronic). Flat layout: semua berkas di root, kecuali api/ yang diminta platform hosting.",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

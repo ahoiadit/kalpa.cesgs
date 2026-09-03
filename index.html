@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d3b4f">
+<title>KALPA — Penilaian Risiko Iklim Fisik</title>
+<style>
+/* Gaya ini di-namespace ke .kshell dan #k* supaya tidak bentrok dengan
+   markup modul KALPA yang nanti ditempel ke dalam slot. */
+.kshell, .kshell * { box-sizing:border-box; }
+.kshell {
+  --bg:#eef3f5; --panel:#ffffff; --line:#d9e2e6; --ink:#12303c; --muted:#5d7885;
+  --acc:#0d7ea8; --acc-d:#0d3b4f; --acute:#c2410c; --chronic:#0d7ea8; --bad:#c33; --ok:#0a8f57;
+  font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  color:var(--ink); min-height:100vh; background:var(--bg);
+}
+body { margin:0; }
+
+/* ---------- layar login ---------- */
+#kLogin { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+  background:linear-gradient(160deg,#0d3b4f,#0d7ea8); }
+#kLogin .card { width:100%; max-width:380px; background:var(--panel); border-radius:16px;
+  box-shadow:0 18px 50px rgba(0,0,0,.25); padding:30px 26px; }
+#kLogin .brand { font-weight:800; font-size:22px; letter-spacing:.5px; color:var(--acc-d); }
+#kLogin .sub { color:var(--muted); font-size:13px; margin:4px 0 20px; }
+.kshell label { display:block; font-size:13px; font-weight:600; margin:14px 0 6px; }
+.kshell input[type=email], .kshell input[type=password], .kshell input[type=text], .kshell input[type=number] {
+  width:100%; padding:11px 12px; font-size:16px; border:1px solid var(--line); border-radius:9px;
+  background:#fff; color:var(--ink); }
+.kshell input:focus { outline:2px solid var(--acc); border-color:var(--acc); }
+.kbtn { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:0; cursor:pointer;
+  background:var(--acc); color:#fff; padding:11px 16px; border-radius:9px; font-size:14px; font-weight:600; }
+.kbtn:hover { background:var(--acc-d); }
+.kbtn.block { width:100%; margin-top:20px; }
+.kbtn.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
+.kbtn.small { padding:7px 12px; font-size:13px; }
+.kerr { color:var(--bad); font-size:13px; margin-top:12px; min-height:18px; }
+
+/* ---------- topbar ---------- */
+#kTop { display:none; align-items:center; gap:12px; padding:12px 20px; background:var(--acc-d); color:#fff; }
+#kTop .logo { font-weight:800; letter-spacing:.5px; }
+#kTop .crumb { color:#bfe0ec; font-size:13px; }
+#kTop .spacer { flex:1; }
+#kTop .who { font-size:13px; opacity:.9; }
+#kTop .kbtn.ghost { color:#fff; border-color:rgba(255,255,255,.4); }
+
+/* ---------- home / pemilih modul ---------- */
+#kHome { display:none; max-width:900px; margin:0 auto; padding:36px 20px; }
+#kHome h1 { font-size:20px; margin:0 0 4px; }
+#kHome p.lead { color:var(--muted); margin:0 0 26px; }
+.kcards { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+@media (max-width:640px){ .kcards { grid-template-columns:1fr; } }
+.kcard { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:24px; cursor:pointer;
+  transition:transform .12s, box-shadow .12s; }
+.kcard:hover { transform:translateY(-3px); box-shadow:0 14px 30px rgba(13,59,79,.14); }
+.kcard .tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.4px; text-transform:uppercase;
+  padding:4px 10px; border-radius:999px; color:#fff; }
+.kcard.acute .tag { background:var(--acute); }
+.kcard.chronic .tag { background:var(--chronic); }
+.kcard h2 { font-size:18px; margin:14px 0 6px; }
+.kcard p { color:var(--muted); font-size:14px; margin:0 0 16px; line-height:1.5; }
+
+/* ---------- modul ---------- */
+.kmod { display:none; max-width:1100px; margin:0 auto; padding:22px 20px; }
+.kslot { background:var(--panel); border:1px dashed var(--line); border-radius:14px; padding:26px;
+  color:var(--muted); text-align:center; }
+.kslot code { background:#eef3f5; padding:2px 6px; border-radius:5px; }
+.kpanel { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; margin-top:18px; }
+.kpanel h3 { margin:0 0 12px; font-size:15px; }
+.krow { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+.krow > div { flex:1; min-width:130px; }
+table.kt { width:100%; border-collapse:collapse; margin-top:14px; font-size:14px; }
+table.kt th, table.kt td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); }
+table.kt th { color:var(--muted); font-weight:600; }
+.kmini { color:var(--muted); font-size:12.5px; margin-top:6px; }
+</style>
+</head>
+<body>
+<div class="kshell">
+
+  <!-- ===================== TOPBAR ===================== -->
+  <header id="kTop">
+    <span class="logo">KALPA</span>
+    <span class="crumb" id="kCrumb"></span>
+    <span class="spacer"></span>
+    <span class="who" id="kWho"></span>
+    <button class="kbtn ghost small" id="kBtnLogout">Keluar</button>
+  </header>
+
+  <!-- ===================== LOGIN ===================== -->
+  <section id="kLogin">
+    <div class="card">
+      <div class="brand">KALPA</div>
+      <div class="sub">Penilaian Risiko Iklim Fisik — masuk untuk melanjutkan</div>
+      <label for="kMail">Surel</label>
+      <input id="kMail" type="email" autocomplete="username" placeholder="nama@cesgs.or.id">
+      <label for="kPass">Kata sandi</label>
+      <input id="kPass" type="password" autocomplete="current-password" placeholder="••••••••">
+      <button class="kbtn block" id="kBtnLogin">Masuk</button>
+      <div class="kerr" id="kLoginErr"></div>
+    </div>
+  </section>
+
+  <!-- ===================== HOME / PEMILIH MODUL ===================== -->
+  <main id="kHome">
+    <h1>Pilih modul penilaian</h1>
+    <p class="lead">Dua modul berbagi satu basis data aset, jadi aset yang dicatat di satu modul terbaca di modul lainnya.</p>
+    <div class="kcards">
+      <div class="kcard acute" data-mod="acute">
+        <span class="tag">Acute</span>
+        <h2>KALPA Acute</h2>
+        <p>Bahaya iklim akut yang bersifat kejadian, seperti banjir, badai, dan gelombang panas.</p>
+        <button class="kbtn small">Buka modul</button>
+      </div>
+      <div class="kcard chronic" data-mod="chronic">
+        <span class="tag">Chronic</span>
+        <h2>KALPA Chronic</h2>
+        <p>Bahaya iklim kronis yang bersifat tren jangka panjang, seperti kenaikan suhu dan muka air laut.</p>
+        <button class="kbtn small">Buka modul</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================== MODUL ACUTE ===================== -->
+  <section id="kModAcute" class="kmod">
+    <!-- ================================================================
+         SLOT MODUL ACUTE
+         Tempel isi KALPA Acute (dari kalpa-merged.html) menggantikan blok
+         .kslot di bawah. Panel data di bawahnya boleh dihapus setelah modul
+         asli terpasang; ia hanya bukti bahwa backend sudah nyambung.
+         ================================================================ -->
+    <div class="kslot">
+      Modul <b>KALPA Acute</b> akan dipasang di sini.<br>
+      Ganti blok <code>.kslot</code> ini dengan isi modul Acute dari <code>kalpa-merged.html</code>.
+    </div>
+
+    <div class="kpanel" data-demo="Acute">
+      <h3>Aset tersimpan (uji backend)</h3>
+      <div class="krow">
+        <div><label>Nama aset</label><input type="text" class="dNama" placeholder="Kantor Pusat"></div>
+        <div><label>Lokasi</label><input type="text" class="dLok" placeholder="Surabaya"></div>
+        <div><label>Skor risiko</label><input type="number" class="dSkor" step="0.01" min="0" max="1" placeholder="0.70"></div>
+        <div style="flex:0"><button class="kbtn dAdd">Simpan</button></div>
+      </div>
+      <table class="kt"><thead><tr><th>Nama</th><th>Lokasi</th><th>Skor</th><th></th></tr></thead><tbody class="dBody"></tbody></table>
+      <div class="kmini dInfo"></div>
+    </div>
+  </section>
+
+  <!-- ===================== MODUL CHRONIC ===================== -->
+  <section id="kModChronic" class="kmod">
+    <!-- ================================================================
+         SLOT MODUL CHRONIC — tempel isi KALPA Chronic di sini.
+         ================================================================ -->
+    <div class="kslot">
+      Modul <b>KALPA Chronic</b> akan dipasang di sini.<br>
+      Ganti blok <code>.kslot</code> ini dengan isi modul Chronic dari <code>kalpa-merged.html</code>.
+    </div>
+
+    <div class="kpanel" data-demo="Chronic">
+      <h3>Aset tersimpan (uji backend)</h3>
+      <div class="krow">
+        <div><label>Nama aset</label><input type="text" class="dNama" placeholder="Gudang Regional"></div>
+        <div><label>Lokasi</label><input type="text" class="dLok" placeholder="Semarang"></div>
+        <div><label>Skor risiko</label><input type="number" class="dSkor" step="0.01" min="0" max="1" placeholder="0.55"></div>
+        <div style="flex:0"><button class="kbtn dAdd">Simpan</button></div>
+      </div>
+      <table class="kt"><thead><tr><th>Nama</th><th>Lokasi</th><th>Skor</th><th></th></tr></thead><tbody class="dBody"></tbody></table>
+      <div class="kmini dInfo"></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ============================================================
+   KALPA API — semua lewat /api (proxy Node). URL Apps Script &
+   token tidak pernah muncul di peramban.
+   ============================================================ */
+var KalpaAPI = (function () {
+  var BASE = (window.KALPA_BASE || '') + '/api';
+  async function call(payload) {
+    var res = await fetch(BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {})
+    });
+    var teks = await res.text(), data;
+    try { data = JSON.parse(teks); }
+    catch (e) { throw new Error('Respons bukan JSON: ' + teks.slice(0, 160)); }
+    return data;
+  }
+  return {
+    uid: function () { return 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); },
+    me:     function () { return call({ action: 'me' }); },
+    login:  function (mail, sandi) { return call({ action: 'login', mail: mail, sandi: sandi }); },
+    logout: function () { return call({ action: 'logout' }); },
+    pull:   function () { return call({ action: 'pull' }); },
+    sync:   function (records, deleted) { return call({ action: 'sync', records: records || [], deleted: deleted || [] }); }
+  };
+})();
+
+/* ============================================================
+   Navigasi antar layar
+   ============================================================ */
+var el = function (id) { return document.getElementById(id); };
+var screens = { login: el('kLogin'), home: el('kHome'), acute: el('kModAcute'), chronic: el('kModChronic') };
+
+function show(name) {
+  el('kLogin').style.display = (name === 'login') ? 'flex' : 'none';
+  el('kTop').style.display   = (name === 'login') ? 'none' : 'flex';
+  el('kHome').style.display  = (name === 'home') ? 'block' : 'none';
+  el('kModAcute').style.display   = (name === 'acute') ? 'block' : 'none';
+  el('kModChronic').style.display = (name === 'chronic') ? 'block' : 'none';
+  el('kCrumb').textContent = name === 'acute' ? '/ KALPA Acute'
+                            : name === 'chronic' ? '/ KALPA Chronic'
+                            : name === 'home' ? '/ Pilih modul' : '';
+  if (name !== 'login') history.replaceState({ scr: name }, '', name === 'home' ? '#home' : '#' + name);
+  if (name === 'acute' || name === 'chronic') muatDemo(name === 'acute' ? 'Acute' : 'Chronic');
+}
+
+/* Kartu pemilih */
+document.querySelectorAll('.kcard').forEach(function (c) {
+  c.addEventListener('click', function () { show(c.getAttribute('data-mod')); });
+});
+
+/* Kembali dari modul lewat klik crumb / tombol back peramban */
+el('kCrumb').addEventListener('click', function () { if (el('kTop').style.display !== 'none') show('home'); });
+el('kCrumb').style.cursor = 'pointer';
+window.addEventListener('popstate', function () {
+  if (el('kLogin').style.display !== 'none') return;
+  var h = location.hash.replace('#', '');
+  show(['acute', 'chronic', 'home'].indexOf(h) >= 0 ? h : 'home');
+});
+
+/* ============================================================
+   Login / logout
+   ============================================================ */
+async function doLogin() {
+  var mail = el('kMail').value.trim(), sandi = el('kPass').value;
+  el('kLoginErr').textContent = '';
+  if (!mail || !sandi) { el('kLoginErr').textContent = 'Surel dan kata sandi wajib diisi.'; return; }
+  el('kBtnLogin').disabled = true; el('kBtnLogin').textContent = 'Memeriksa...';
+  try {
+    var out = await KalpaAPI.login(mail, sandi);
+    if (!out || !out.ok) { el('kLoginErr').textContent = (out && out.error) || 'Gagal masuk.'; return; }
+    el('kPass').value = '';
+    setUser(out.akun);
+    show('home');
+  } catch (e) {
+    el('kLoginErr').textContent = e.message;
+  } finally {
+    el('kBtnLogin').disabled = false; el('kBtnLogin').textContent = 'Masuk';
+  }
+}
+el('kBtnLogin').addEventListener('click', doLogin);
+el('kPass').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
+
+el('kBtnLogout').addEventListener('click', async function () {
+  try { await KalpaAPI.logout(); } catch (e) {}
+  setUser(null);
+  show('login');
+});
+
+function setUser(akun) {
+  el('kWho').textContent = akun ? (akun.nama || akun.email || '') : '';
+}
+
+/* ============================================================
+   Panel demo (bukti backend) — hapus setelah modul asli terpasang
+   ============================================================ */
+async function muatDemo(modul) {
+  var panel = document.querySelector('.kpanel[data-demo="' + modul + '"]');
+  if (!panel) return;
+  var body = panel.querySelector('.dBody'), info = panel.querySelector('.dInfo');
+  info.textContent = 'Memuat...';
+  try {
+    var snap = await KalpaAPI.pull();
+    var rows = (snap.data || []).filter(function (r) { return String(r.modul) === modul; });
+    body.innerHTML = '';
+    rows.forEach(function (r) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + esc(r.nama_aset) + '</td><td>' + esc(r.lokasi) + '</td><td>' + esc(r.skor_risiko) + '</td>' +
+        '<td><button class="kbtn ghost small" data-del="' + esc(r.uid) + '">Hapus</button></td>';
+      body.appendChild(tr);
+    });
+    info.textContent = rows.length + ' aset di modul ' + modul + '. Data tersimpan di Google Sheet lewat Apps Script.';
+    body.querySelectorAll('[data-del]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        b.disabled = true;
+        try { await KalpaAPI.sync([], [b.getAttribute('data-del')]); await muatDemo(modul); }
+        catch (e) { info.textContent = e.message; }
+      });
+    });
+  } catch (e) { info.textContent = e.message; }
+}
+
+document.querySelectorAll('.kpanel[data-demo]').forEach(function (panel) {
+  var modul = panel.getAttribute('data-demo');
+  panel.querySelector('.dAdd').addEventListener('click', async function () {
+    var nama = panel.querySelector('.dNama').value.trim();
+    var lok = panel.querySelector('.dLok').value.trim();
+    var skor = panel.querySelector('.dSkor').value;
+    if (!nama) { panel.querySelector('.dInfo').textContent = 'Nama aset wajib diisi.'; return; }
+    panel.querySelector('.dInfo').textContent = 'Menyimpan...';
+    try {
+      await KalpaAPI.sync([{ uid: KalpaAPI.uid(), modul: modul, nama_aset: nama, lokasi: lok, skor_risiko: skor }], []);
+      panel.querySelector('.dNama').value = ''; panel.querySelector('.dLok').value = ''; panel.querySelector('.dSkor').value = '';
+      await muatDemo(modul);
+    } catch (e) { panel.querySelector('.dInfo').textContent = e.message; }
+  });
+});
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+  return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+/* ============================================================
+   Saat halaman dibuka: cek sesi, tampilkan login atau home
+   ============================================================ */
+(async function boot() {
+  try {
+    var out = await KalpaAPI.me();
+    if (out && out.ok && out.user) { setUser(out.user); show('home'); }
+    else { show('login'); }
+  } catch (e) { show('login'); }
+})();
+</script>
+</body>
+</html>
